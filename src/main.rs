@@ -1,6 +1,3 @@
-
-
-//! An example of generating julia fractals.
 extern crate image;
 extern crate num_complex;
 extern crate num_cpus;
