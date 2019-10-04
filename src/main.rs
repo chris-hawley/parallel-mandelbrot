@@ -7,28 +7,23 @@ use num_complex::Complex;
 use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
 
-fn main() {
-    let max_iterations = 100u16;
-    let img_size = 8000u32;
-    let cxmin = -2f32;
-    let cxmax = 1f32;
-    let cymin = -1.5f32;
-    let cymax = 1.5f32;
-    let scalex = (cxmax - cxmin) / img_size as f32;
-    let scaley = (cymax - cymin) / img_size as f32;
- 
-    // Create a new ImgBuf
-    let imgbuf = Arc::new(Mutex::new(image::ImageBuffer::new(img_size, img_size)));
-    
-    imgbuf.lock().unwrap().pixels();
+static max_iterations: u16 = 100u16;
+static img_size: u32 =  8000u32;
+static cxmin: f32 = -2f32;
+static cxmax: f32 = 1f32;
+static cymin: f32 = -1.5f32;
+static cymax: f32 = 1.5f32;
+static scalex: f32 = (cxmax - cxmin) / img_size as f32;
+static scaley: f32 = (cymax - cymin) / img_size as f32;
 
-    //parallel mandel calculation
-    let work_items = img_size * img_size;
-    let num_cpus = num_cpus::get();
 
-    (0..num_cpus).into_par_iter().for_each(|c|{
-        (c..(work_items as usize)).step_by(num_cpus).for_each(|i| {
-        
+fn mandel_loop(mut imgbuf: image::ImageBuffer<image::Rgb<u8>, std::vec::Vec<<image::Rgb<u8> as image::Pixel>::Subpixel>>, c: u32, work_items: u32, num_cpus: usize)
+    //where F: image::GenericImageView + image::GenericImage  //+ image::ImageBuffer<image::Rgb<u8>, std::vec::Vec<<image::Rgb<u8> as image::Pixel>::Subpixel>>
+{
+    (c..(work_items)).step_by(num_cpus).for_each(|i| 
+            
+        {
+            
             let x = (i as u32) % img_size;
             let y = ((i as u32) / img_size) as u32;
 
@@ -54,22 +49,37 @@ fn main() {
 
             if quotient > 0.5
             {
-                let pixel = image::Rgb([color as u8, 255 as u8, color as u8]);
-                imgbuf.lock().unwrap().put_pixel(x as u32,y as u32,pixel);
+                let pixel = image::Rgb([0 as u8, color as u8,0 as u8]);
+                imgbuf.put_pixel(x as u32,y as u32, pixel);
             }
             else
             {
                 let pixel = image::Rgb([0 as u8, color as u8,0 as u8]);
-                imgbuf.lock().unwrap().put_pixel(x as u32,y as u32,pixel);
+                imgbuf.put_pixel(x as u32,y as u32, pixel);
             }
 
             
         });    
+}
+
+fn main() {
+    
+ 
+    // Create a new ImgBuf
+    let mut imgbuf = image::ImageBuffer::new(img_size, img_size);
+
+    //parallel mandel calculation
+    let work_items = img_size * img_size;
+
+    let num_cpus = num_cpus::get();
+
+    (0..num_cpus).into_par_iter().for_each(|c|{
+        mandel_loop(imgbuf, c as u32, work_items, num_cpus);
     });
 
 
     
  
     // Save image
-    imgbuf.lock().unwrap().save("fractal.png").unwrap();
+    imgbuf.save("fractal.png").unwrap();
 }
